@@ -10,7 +10,7 @@ import           Control.Applicative
 import           Control.Exception
 import           Control.Monad (foldM, forM_)
 import           Data.Char (isSpace)
-import           Data.List (dropWhileEnd, nub, sort, isInfixOf, stripPrefix)
+import           Data.List (nub, sort, isInfixOf, stripPrefix)
 import           Data.List.Split (splitWhen)
 import qualified Data.Map as Map
 import qualified Data.Set as Set
@@ -123,6 +123,9 @@ readGhcPkgField pkgName fieldName = do
 	case stripPrefix (fieldName ++ ":") rawField of
 		Nothing -> error ("Unexpected output from ghc-pkg field: " ++ show rawField)
 		Just s -> return (dropWhile isSpace (dropWhileEnd isSpace s))
+
+dropWhileEnd :: (a -> Bool) -> [a] -> [a]
+dropWhileEnd p = foldr (\x xs -> if p x && null xs then [] else x : xs) []
 
 initSandbox :: MainOptions -> IO ()
 initSandbox opts = do
