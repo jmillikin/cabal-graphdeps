@@ -98,7 +98,7 @@ lineVersionWithNote = do
 	return version
 
 alphaNumDot :: Parsec.Parser Char
-alphaNumDot = Parsec.lower <|> Parsec.digit <|> Parsec.oneOf "-."
+alphaNumDot = Parsec.lower <|> Parsec.upper <|> Parsec.digit <|> Parsec.oneOf "-."
 
 renderDeps :: MainOptions -> Map.Map String (Set.Set String) -> String -> [String]
 renderDeps opts deps pkg = do
