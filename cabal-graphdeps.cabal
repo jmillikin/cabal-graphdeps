@@ -1,5 +1,5 @@
 name: cabal-graphdeps
-version: 0.1.1
+version: 0.1.2
 license: MIT
 license-file: license.txt
 author: John Millikin <john@john-millikin.com>
@@ -21,7 +21,7 @@ source-repository head
 source-repository this
   type: git
   location: https://john-millikin.com/code/cabal-graphdeps/
-  tag: cabal-graphdeps_0.1.1
+  tag: cabal-graphdeps_0.1.2
 
 executable cabal-graphdeps
   main-is: Main.hs

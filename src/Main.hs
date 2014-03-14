@@ -16,6 +16,7 @@ import qualified Data.Map as Map
 import qualified Data.Set as Set
 import           Options
 import qualified System.Directory as Filesystem
+import           System.Exit (exitFailure)
 import qualified System.Process as Process
 import qualified System.IO as IO
 import           System.IO.Temp (withSystemTempDirectory)
@@ -170,9 +171,14 @@ withCurrentDirectory dir io = bracket
 
 main :: IO ()
 main = runCommand $ \opts args -> do
+	rootPackageName <- case args of
+		[x] -> return x
+		_ -> do
+			IO.hPutStrLn IO.stderr "Usage: cabal-graphdeps <package-name>"
+			exitFailure
 	deps <- withSystemTempDirectory "cabal-graphdeps.d-" $ \dir -> withCurrentDirectory dir $ do
 		initSandbox opts
-		resolveDeps opts Map.empty (args !! 0)
+		resolveDeps opts Map.empty rootPackageName
 	putStrLn "digraph {"
-	printDeps opts deps (args !! 0)
+	printDeps opts deps rootPackageName
 	putStrLn "}"
