@@ -10,7 +10,7 @@ import           Control.Applicative
 import           Control.Exception
 import           Control.Monad (foldM, forM_)
 import           Data.Char (isSpace)
-import           Data.List (nub, sort, isInfixOf, stripPrefix)
+import           Data.List (isInfixOf, stripPrefix)
 import           Data.List.Split (splitWhen)
 import qualified Data.Map as Map
 import qualified Data.Set as Set
@@ -101,14 +101,28 @@ lineVersionWithNote = do
 alphaNumDot :: Parsec.Parser Char
 alphaNumDot = Parsec.lower <|> Parsec.upper <|> Parsec.digit <|> Parsec.oneOf "-."
 
-renderDeps :: MainOptions -> Map.Map String (Set.Set String) -> String -> [String]
-renderDeps opts deps pkg = do
-	dep <- Set.toList (Map.findWithDefault Set.empty pkg deps)
-	let line = (show pkg ++ " -> " ++ show dep)
+renderDeps :: MainOptions -> Map.Map String (Set.Set String) -> String -> Set.Set String
+renderDeps opts deps rootPkg = rendered where
+	(_, _, rendered) = loop rootPkg (rootPkg, Set.empty, Set.empty)
+	
+	-- This package has already been visited, so we don't need to continue
+	-- any further.
+	loop pkg acc@(_, visited, _) | Set.member pkg visited = acc
+	
 	-- map "foo-bar-baz-1.0" to "foo-bar-baz" for excluded packages
-	if Set.member (extractPkgName dep) (optExclude opts)
-		then []
-		else line : renderDeps opts deps dep
+	loop pkg acc | Set.member (extractPkgName pkg) (optExclude opts) = acc
+	
+	loop pkg (parent, visited, lines) = let
+		pkgDeps = Set.toList (Map.findWithDefault Set.empty pkg deps)
+		visited' = Set.insert pkg visited
+		lines' = Set.union lines $ Set.fromList $ do
+			dep <- pkgDeps
+			-- map "foo-bar-baz-1.0" to "foo-bar-baz" for excluded packages
+			if Set.member (extractPkgName dep) (optExclude opts)
+				then []
+				else [show pkg ++ " -> " ++ show dep]
+		(_, visited'', lines'') = foldr loop (pkg, visited', lines') pkgDeps
+		in (parent, visited'', lines'')
 
 extractPkgName :: String -> String
 extractPkgName pkg = case stripPrefix "-" (dropWhile (/= '-') (reverse pkg)) of
@@ -116,7 +130,7 @@ extractPkgName pkg = case stripPrefix "-" (dropWhile (/= '-') (reverse pkg)) of
 	Just rev -> reverse rev
 
 printDeps :: MainOptions -> Map.Map String (Set.Set String) -> String -> IO ()
-printDeps opts deps pkg = forM_ (nub (sort (renderDeps opts deps pkg))) putStrLn
+printDeps opts deps pkg = forM_ (Set.toAscList (renderDeps opts deps pkg)) putStrLn
 
 readGhcPkgField :: String -> String -> IO String
 readGhcPkgField pkgName fieldName = do
