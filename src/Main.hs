@@ -3,7 +3,7 @@
 -- License: MIT
 --
 -- Run like:
--- >$ cabal-graphdeps mypackage | tred | dot -Tpng > ~/mypackage.png
+-- >$ cabal-graphdeps <mypackage> | tred | dot -Tpng > ~/<mypackage>.png
 module Main where
 
 import           Control.Applicative
@@ -36,12 +36,12 @@ instance Options MainOptions where
 		<*> defineOption (optionType_list ',' optionType_string) (\o -> o
 			{ optionLongFlags = ["fundamental-packages"]
 			, optionDefault = ["base"]
-			, optionDescription = "These packages and their dependencies should be considered fundamental to the package DB."
+			, optionDescription = "These comma-separated packages and their dependencies must already be installed."
 			})
 		<*> defineOption (optionType_set ',' optionType_string) (\o -> o
 			{ optionLongFlags = ["exclude-packages"]
 			, optionDefault = Set.empty
-			, optionDescription = "These packages and their dependencies will be excluded when rendering the graph."
+			, optionDescription = "These comma-separated packages and their dependencies will be excluded when rendering the graph."
 			})
 
 resolveDeps :: MainOptions -> Map.Map String (Set.Set String) -> String -> IO (Map.Map String (Set.Set String))
