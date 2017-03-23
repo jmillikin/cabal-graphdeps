@@ -153,9 +153,11 @@ initSandbox opts = do
 			rawGlobalDb <- Process.readProcess "ghc-pkg" ["list", "--no-user-package-db"] ""
 			case lines rawGlobalDb of
 				firstLine:_ ->
-					-- ghc-pkg adds a ':' to the first line when not
+					-- Some versions of ghc-pkg adds a ':' to the first line when not
 					-- run from a terminal
-					return (reverse (drop 1 (reverse firstLine)))
+					if last firstLine == ':'
+					then return (init firstLine)
+					else return firstLine
 				_ -> error "Unexpected output from ghc-pkg list"
 		path -> return path
 	
