@@ -1,5 +1,5 @@
 name: cabal-graphdeps
-version: 0.1.3
+version: 0.2.0
 license: MIT
 license-file: license.txt
 author: John Millikin <john@john-millikin.com>
@@ -11,8 +11,10 @@ stability: experimental
 homepage: https://john-millikin.com/software/cabal-graphdeps/
 bug-reports: mailto:jmillikin@gmail.com
 
-synopsis: Generate graphs of install-time Cabal dependencies
-description:
+synopsis: Generate Dot graphs of install-time Cabal dependencies
+description: Generate Dot graphs of install-time Cabal dependencies.
+
+extra-soure-files: README.md
 
 source-repository head
   type: git
