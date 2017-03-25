@@ -8,9 +8,9 @@ module Main where
 
 import           Control.Applicative
 import           Control.Exception
-import           Control.Monad (foldM, forM_)
+import           Control.Monad (foldM, forM_, when)
 import           Data.Char (isSpace)
-import           Data.List (isInfixOf, stripPrefix)
+import           Data.List (isInfixOf, isSuffixOf, stripPrefix)
 import           Data.List.Split (splitWhen)
 import qualified Data.Map as Map
 import qualified Data.Set as Set
@@ -25,12 +25,13 @@ import qualified Text.Parsec.String as Parsec
 
 data MainOptions = MainOptions
 	{ optGlobalPackageDb :: String
-	, optFundamental :: [String]
+	, optGlobalPackages :: [String]
 	, optExclude :: Set.Set String
 	, optCabal :: String
 	, optGhcPkg :: String
 	, optAddSources :: [FilePath]
 	, optCabalConfig :: Maybe FilePath
+	, optUseAllGlobalPackages :: Bool
 	}
 
 instance Options MainOptions where
@@ -38,9 +39,9 @@ instance Options MainOptions where
 		<*> simpleOption "global-package-db" ""
 		    ""
 		<*> defineOption (optionType_list ',' optionType_string) (\o -> o
-			{ optionLongFlags = ["fundamental-packages"]
+			{ optionLongFlags = ["global-packages"]
 			, optionDefault = ["base"]
-			, optionDescription = "These comma-separated packages and their dependencies must already be installed."
+			, optionDescription = "These comma-separated packages and their dependencies will be taken from the global package db. See also '--use-all-global-packages'."
 			})
 		<*> defineOption (optionType_set ',' optionType_string) (\o -> o
 			{ optionLongFlags = ["exclude-packages"]
@@ -66,6 +67,11 @@ instance Options MainOptions where
 			{ optionLongFlags = ["cabal-config"]
 			, optionDefault = Nothing
 			, optionDescription = "The path to a 'cabal.config' file, e.g. to specify constraints."
+			})
+		<*> defineOption (optionType_bool) (\o -> o
+			{ optionLongFlags = ["use-all-global-packages"]
+			, optionDefault = False
+			, optionDescription = "If this option is true then all packages in the global package db will be used. When this option is true the '--global-packages' option is ignored, since those packages must be a subset of the packages available in the global package db; this option is the same as listed all globally installed packages as arguments to '--global-packages'."
 			})
 
 resolveDeps :: MainOptions -> Map.Map String (Set.Set String) -> String -> IO (Map.Map String (Set.Set String))
@@ -186,10 +192,19 @@ initSandbox opts = do
 					else return firstLine
 				_ -> error "Unexpected output from ghc-pkg list"
 		path -> return path
-	
+
+	-- All globally installed packages will be assumed installed at
+	-- their globally installed versions. They will be excluded from the
+	-- dependency graph.
+	when (optUseAllGlobalPackages opts) $ do
+		globalDbContents <- Filesystem.listDirectory globalDb
+		forM_ globalDbContents $ \file -> do
+			when (".conf" `isSuffixOf` file) $
+				Filesystem.copyFile (globalDb ++ "/" ++ file) ("empty-db/" ++ file)
+
 	-- these packages and their dependencies will be excluded from the
-	-- graph for being fundamental.
-	forM_ (optFundamental opts) $ \pkg -> do
+	-- graph.
+	when (not $ optUseAllGlobalPackages opts) $ forM_ (optGlobalPackages opts) $ \pkg -> do
 		-- find package id (used in .conf filename)
 		pkgId <- readGhcPkgField opts pkg "id"
 		let pkgConf = pkgId ++ ".conf"
